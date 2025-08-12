@@ -1,20 +1,16 @@
-// =============================================
-// New: Global App Header for Logged-in users
-// Reusable across all authenticated pages
-// =============================================
-
-// ---------------------------------
 // components/app/main-header.tsx
-// ---------------------------------
 "use client";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 
 type User = { name: string; avatarUrl?: string };
+
 export function MainHeader({ user, alertsCount = 0 }: { user: User; alertsCount?: number }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const hasAlerts = alertsCount > 0;
+  const messagesCount = 3; // mock
+  const cartCount = 2;     // mock
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur bg-base-100/80 border-b border-base-200">
@@ -23,7 +19,6 @@ export function MainHeader({ user, alertsCount = 0 }: { user: User; alertsCount?
         <div className="navbar-start gap-2">
           <Link href="/" className="flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              {/* placeholder logo - replace with final SVG */}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5"><path fill="currentColor" d="M12 2c1.7 0 3 1.3 3 3v1.2c1.8.6 3 2.3 3 4.2v.6h-2.5l1.5 5H15l-1-3h-4l-1 3H7l1.5-5H6V10.4c0-1.9 1.2-3.6 3-4.2V5c0-1.7 1.3-3 3-3z"/></svg>
             </span>
             <span className="text-xl font-bold tracking-tight">MercadoBG</span>
@@ -39,9 +34,9 @@ export function MainHeader({ user, alertsCount = 0 }: { user: User; alertsCount?
           </nav>
         </div>
 
-        {/* Right: alerts, search, user */}
+        {/* Right: icons and user */}
         <div className="navbar-end gap-2">
-          {/* Alerts with indicator */}
+          {/* Alerts */}
           <button className="btn btn-ghost btn-circle" aria-label="Alertas">
             <div className="indicator">
               {hasAlerts && <span className="indicator-item badge badge-error badge-xs" />}
@@ -49,18 +44,42 @@ export function MainHeader({ user, alertsCount = 0 }: { user: User; alertsCount?
             </div>
           </button>
 
-          {/* Open search bar */}          
+          {/* Messages */}
+          <button className="btn btn-ghost btn-circle" aria-label="Mensagens">
+            <div className="indicator">
+              {messagesCount > 0 && <span className="indicator-item badge badge-secondary badge-xs" />}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M7 8h10M7 12h4m-2 8c-4.418 0-8-3.134-8-7V5a2 2 0 012-2h16a2 2 0 012 2v6c0 3.866-3.582 7-8 7H9l-4 4v-4z" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Cart */}
+          <button className="btn btn-ghost btn-circle" aria-label="Carrinho">
+            <div className="indicator">
+              {cartCount > 0 && <span className="indicator-item badge badge-primary badge-xs" />}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-2 9m5-9v9m4-9v9m4-9l2 9" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Search */}
           <button
             type="button"
             aria-label="Abrir busca"
             className="btn btn-ghost btn-circle"
             onClick={() => (window as any).openSearchModal?.()}
           >
-            {/* ícone de lupa */}
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round"
-                strokeLinejoin="round" strokeWidth="2"
-                d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" /></svg>
+              viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
           </button>
 
           {/* User dropdown */}
@@ -72,7 +91,8 @@ export function MainHeader({ user, alertsCount = 0 }: { user: User; alertsCount?
                 </div>
               </div>
               <span className="hidden sm:inline-block max-w-[140px] truncate text-left">{user.name}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4 opacity-60"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                className="h-4 w-4 opacity-60"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
             </div>
             <ul tabIndex={0} className="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-56 p-2 shadow">
               <li><Link href="/profile">Perfil</Link></li>
@@ -91,7 +111,8 @@ export function MainHeader({ user, alertsCount = 0 }: { user: User; alertsCount?
         <div className="modal modal-open">
           <div className="modal-box max-w-3xl">
             <form action="/search" className="join w-full">
-              <input autoFocus name="q" className="input input-bordered join-item w-full" placeholder="Busque por título, editor, mecânica..." />
+              <input autoFocus name="q" className="input input-bordered join-item w-full"
+                placeholder="Busque por título, editor, mecânica..." />
               <select name="category" className="select select-bordered join-item hidden sm:block">
                 <option value="">Todas</option>
                 <option>Euro</option>
