@@ -49,9 +49,18 @@ export function MainHeader({ user, alertsCount = 0 }: { user: User; alertsCount?
             </div>
           </button>
 
-          {/* Open search bar */}
-          <button className="btn btn-ghost btn-circle" aria-label="Buscar" onClick={() => setSearchOpen(true)}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-6 w-6"><path fill="currentColor" d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.9.9l.3.3v.8L20 21.5 21.5 20 15.5 14zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+          {/* Open search bar */}          
+          <button
+            type="button"
+            aria-label="Abrir busca"
+            className="btn btn-ghost btn-circle"
+            onClick={() => (window as any).openSearchModal?.()}
+          >
+            {/* ícone de lupa */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round"
+                strokeLinejoin="round" strokeWidth="2"
+                d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" /></svg>
           </button>
 
           {/* User dropdown */}
