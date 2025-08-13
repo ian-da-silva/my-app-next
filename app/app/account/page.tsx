@@ -2,282 +2,279 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 
-/** MOCKS */
-const userMock = {
-  name: "Ian Segobio",
-  email: "ian@example.com",
-  avatarUrl: "/mock/avatar-01.png",
-};
-const reputationMock = {
-  score: 4.8,
-  total: 64,
-  badges: ["Confiável", "Entrega Rápida", "Bem Avaliado"],
-};
-
-/** Ícones */
-function IconBag() {
+/* charts (same as before) */
+function Bars({ data }: { data: number[] }) {
+  const max = Math.max(...data, 1);
+  const h = 80, w = 220, gap = 4;
+  const bw = Math.floor((w - gap * (data.length - 1)) / data.length);
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m4-9l2 9"/>
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-24">
+      {data.map((v, i) => {
+        const bh = Math.round((v / max) * (h - 2));
+        const x = i * (bw + gap);
+        const y = h - bh;
+        return <rect key={i} x={x} y={y} width={bw} height={bh} rx="2" className="fill-primary/80" />;
+      })}
     </svg>
   );
 }
-function IconStore() {
+function Line({ data }: { data: number[] }) {
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const h = 80, w = 220;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / (max - min || 1)) * h;
+    return `${x},${y}`;
+  }).join(" ");
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M3 3h18v2H3zM5 7h14v13H5z"/>
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-24">
+      <polyline fill="none" stroke="currentColor" strokeWidth="2" className="text-secondary" points={points} />
     </svg>
   );
 }
-function IconGrid() {
+function Donut({ values }: { values: { label: string; value: number }[] }) {
+  const total = values.reduce((a, b) => a + b.value, 0) || 1;
+  let acc = 0; const r = 30; const c = 2 * Math.PI * r;
+  const palette = ["text-primary","text-secondary","text-accent","text-warning","text-info","text-success"];
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 8v-8h8v8h-8z"/>
-    </svg>
-  );
-}
-function IconHammer() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M2 21l9-9 4 4-9 9H2zM20.7 7.3l-4-4-3.3 3.3 4 4 3.3-3.3z"/>
-    </svg>
-  );
-}
-function IconUser() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm7 9a7 7 0 00-14 0h14z"/>
-    </svg>
-  );
-}
-function IconMap() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2a7 7 0 00-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 00-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/>
-    </svg>
-  );
-}
-function IconBank() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2L2 7l10 5 10-5-10-5zm-9 8v7h18v-7l-9 4.5L3 10z"/>
-    </svg>
-  );
-}
-function IconGear() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.4 4a7.46 7.46 0 01-.14 1.4l2.06 1.6-2 3.46-2.44-1a7.5 7.5 0 01-2.42 1.4l-.36 2.6H9.9l-.36-2.6a7.5 7.5 0 01-2.42-1.4l-2.44 1-2-3.46 2.06-1.6A7.46 7.46 0 014.6 12c0-.48.05-.96.14-1.4L2.68 9l2-3.46 2.44 1A7.5 7.5 0 019.54 5.1l.36-2.6h4.2l.36 2.6a7.5 7.5 0 012.42 1.4l2.44-1 2 3.46-2.06 1.6c.09.44.14.92.14 1.4z"/>
-    </svg>
-  );
-}
-
-/** Cards do topo com visuais */
-function NameCard() {
-  return (
-    <div className="card border border-base-200 overflow-hidden">
-      {/* faixa superior com gradiente + pattern */}
-      <div className="relative h-20 bg-gradient-to-r from-primary/90 via-secondary/80 to-accent/80">
-        {/* pattern de bolinhas */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage:
-              "radial-gradient(currentColor 1px, transparent 1px)",
-            backgroundSize: "12px 12px",
-            color: "white",
-          }}
-        />
-      </div>
-
-      <div className="card-body pt-0">
-        <div className="-mt-10 flex items-center gap-4">
-          <div className="avatar">
-            <div className="w-20 rounded-full ring ring-base-100 ring-offset-2 ring-offset-base-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={userMock.avatarUrl} alt={userMock.name} />
-            </div>
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold truncate">{userMock.name}</h1>
-            <p className="text-sm opacity-70 truncate">{userMock.email}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <div className="badge badge-success badge-sm">Verificado</div>
-              <div className="badge badge-ghost badge-sm">Membro desde 2023</div>
-            </div>
-          </div>
-          <div className="ms-auto">
-            <Link href="/app/profile" className="btn btn-sm">Editar perfil</Link>
-          </div>
-        </div>
-
-        {/* Atalhos rápidos */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/app/sell/new" className="btn btn-primary btn-sm">+ Novo anúncio</Link>
-          <Link href="/app/auctions/new" className="btn btn-secondary btn-sm"><IconHammer /> Criar leilão</Link>
-          <Link href="/app/bank" className="btn btn-ghost btn-sm"><IconBank /> Conta para receber</Link>
-        </div>
-      </div>
+    <div className="flex items-center justify-center gap-4">
+      <svg viewBox="0 0 80 80" className="w-24 h-24 -rotate-90">
+        <circle cx="40" cy="40" r={r} className="fill-none stroke-base-300" strokeWidth="10" />
+        {values.map((v, i) => {
+          const frac = v.value / total, dash = c * frac, dashArray = `${dash} ${c - dash}`;
+          const el = (
+            <circle key={i} cx="40" cy="40" r={r} strokeWidth="10" fill="none"
+              className={`stroke-current ${palette[i % palette.length]}`}
+              strokeDasharray={dashArray} strokeDashoffset={-acc} />
+          );
+          acc += dash; return el;
+        })}
+      </svg>
+      <ul className="text-sm list-none pl-0">
+        {values.map((v, i) => (
+          <li key={v.label} className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${["bg-primary","bg-secondary","bg-accent","bg-warning","bg-info","bg-success"][i % 6]}`} />
+            {v.label}: <span className="font-semibold">{v.value}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function ReputationCard() {
-  const scorePct = Math.round((reputationMock.score / 5) * 100); // para radial-progress
+export default function AccountDashboard() {
+  const kpis = {
+    sellsMonth: 12, sellsTotal: 143,
+    purchasesMonth: 5, purchasesTotal: 52,
+    bankAccounts: 2,
+    unanswered: 3,
+    productsListed: 28,
+    reimbursements: 1,
+    auctionsCreated: 4, auctionsFollowed: 9, myBids: 6,
+    withdrawable: 2190.45, pending: 540.0,
+  };
+  const [hideMoney, setHideMoney] = useState(true);
+  const barsData = useMemo(() => [6,3,7,4,8,9,5,10,7,8,12,9], []);
+  const lineSales = useMemo(() => [12,9,14,10,16,18,13,17,19,15,20,22], []);
+  const lineVisits = useMemo(() => [30,28,34,29,40,37,42,38,46,44,48,45], []);
+  const donutSources = useMemo(() => ([
+    { label: "Direto", value: 44 },
+    { label: "Busca", value: 26 },
+    { label: "Social", value: 18 },
+    { label: "E-mail", value: 12 },
+  ]), []);
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const Money = ({ value }: { value: number }) => <span>{hideMoney ? "••••" : fmt(value)}</span>;
+
+  // common class so all small tiles reserve room for a subtitle line
+  const STAT_CLASS = "stat bg-base-100 rounded-2xl shadow-sm border border-base-300 min-h-[120px]";
+
   return (
-    <div className="card bg-base-100 border border-base-200">
-      <div className="card-body">
-        <h3 className="card-title">Reputação</h3>
+    <div className="space-y-6">
+      {/* KPI Row: Vendas / Compras are split cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Vendas (split, no inner borders) */}
+        {/* Leilões (same split layout as Vendas/Compras; no inner borders; vertical dividers) */}
+        <Link href="/app/auctions" className="no-underline text-inherit">
+          <div className="stat bg-base-100 rounded-2xl shadow-sm border border-base-300 min-h-[120px]">
+            <div className="stat-title">Leilões</div>
 
-        <div className="flex items-center gap-6">
-          {/* radial-progress */}
-          <div className="radial-progress text-primary" style={{ "--value": scorePct, "--size": "4.5rem" } as any}>
-            {reputationMock.score.toFixed(1)}
-          </div>
-
-          <div className="space-y-2">
-            {/* estrelas DaisyUI */}
-            <div className="rating rating-sm">
-              {[1,2,3,4,5].map((i)=>(
-                <input
-                  key={i}
-                  type="radio"
-                  name="rating-rc"
-                  className="mask mask-star-2 bg-primary"
-                  readOnly
-                  checked={i === Math.round(reputationMock.score)}
-                />
-              ))}
-            </div>
-            <div className="text-sm opacity-70">{reputationMock.total} avaliações</div>
-            <div className="flex flex-wrap gap-2">
-              {reputationMock.badges.map((b)=>(
-                <div key={b} className="badge badge-ghost">{b}</div>
-              ))}
-            </div>
-          </div>
-
-          <div className="ms-auto">
-            <Link href="/app/reviews" className="btn btn-outline btn-sm">Ver avaliações</Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Card-link com faixa colorida + hover “vivo” */
-function LinkCard({
-  href, title, desc, chips, color = "from-primary/15 to-primary/5", icon,
-}: {
-  href: string; title: string; desc?: string; chips?: string[]; color?: string; icon?: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group card border border-base-200 hover:shadow-xl transition will-change-transform hover:-translate-y-0.5"
-    >
-      {/* faixa superior suave */}
-      <div className={`h-1 bg-gradient-to-r ${color}`} />
-      <div className="card-body">
-        <div className="flex items-start gap-3">
-          <div className="btn btn-ghost btn-circle pointer-events-none group-hover:scale-110 transition">
-            {icon ?? <IconGrid />}
-          </div>
-          <div className="min-w-0">
-            <h4 className="font-semibold">{title}</h4>
-            {desc ? <p className="text-sm opacity-70">{desc}</p> : null}
-            {chips?.length ? (
-              <div className="flex flex-wrap gap-2 pt-2">
-                {chips.map((c) => <div key={c} className="badge badge-ghost">{c}</div>)}
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <div className="text-center">
+                <div className="text-xs opacity-70">Criados</div>
+                <div className="text-2xl font-semibold text-primary">{kpis.auctionsCreated}</div>
               </div>
-            ) : null}
+
+              {/* vertical divider (robust across DaisyUI versions) */}
+              <span className="w-px h-10 bg-base-300 rounded" />
+
+              <div className="text-center">
+                <div className="text-xs opacity-70">Seguindo</div>
+                <div className="text-2xl font-semibold text-primary">{kpis.auctionsFollowed}</div>
+              </div>
+
+              <span className="w-px h-10 bg-base-300 rounded" />
+
+              <div className="text-center">
+                <div className="text-xs opacity-70">Meus lances</div>
+                <div className="text-2xl font-semibold text-primary">{kpis.myBids}</div>
+              </div>
+            </div>
           </div>
-          <div className="ms-auto opacity-60 group-hover:opacity-100 transition">
-            {/* chevron */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707A1 1 0 018.707 5.293l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg>
+        </Link>
+
+        {/* Compras (split, no inner borders) */}
+        <Link href="/app/orders" className="no-underline text-inherit">
+          <div className={STAT_CLASS}>
+            <div className="stat-title">Compras</div>
+            <div className="flex items-center justify-center gap-4">
+              <div className="text-center">
+                <div className="text-xs opacity-70">Último mês</div>
+                <div className="text-2xl font-semibold text-primary">{kpis.purchasesMonth}</div>
+              </div>
+
+              {/* vertical divider at center */}
+              <div className="divider divider-vertical mx-2" />
+
+              <div className="text-center">
+                <div className="text-xs opacity-70">Total</div>
+                <div className="text-2xl font-semibold text-primary">{kpis.purchasesTotal}</div>
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {/* Contas bancárias (with Principal:) */}
+        <Link href="/app/bank" className="no-underline text-inherit">
+          <div className={STAT_CLASS}>
+            <div className="stat-title">Contas bancárias</div>
+            <div className="stat-value text-primary">{kpis.bankAccounts}</div>
+            <div className="stat-desc">
+              <span className="opacity-70">Principal:</span> Nubank • ••••1234
+            </div>
+          </div>
+        </Link>
+
+        {/* Perguntas (reserve subtitle line via min-h) */}
+        <Link href="/app/questions" className="no-underline text-inherit">
+          <div className={STAT_CLASS}>
+            <div className="stat-title">Perguntas sem resposta</div>
+            <div className="stat-value text-primary">{kpis.unanswered}</div>
+            <div className="stat-desc">&nbsp;</div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Second row (unchanged structure except consistent min height) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Link href="/app/products" className="no-underline text-inherit">
+          <div className={STAT_CLASS}>
+            <div className="stat-title">Produtos listados</div>
+            <div className="stat-value text-primary">{kpis.productsListed}</div>
+            <div className="stat-desc">&nbsp;</div>
+          </div>
+        </Link>
+
+        <Link href="/app/reimbursements" className="no-underline text-inherit">
+          <div className={STAT_CLASS}>
+            <div className="stat-title">Reembolsos</div>
+            <div className="stat-value text-primary">{kpis.reimbursements}</div>
+            <div className="stat-desc">&nbsp;</div>
+          </div>
+        </Link>
+
+        <Link href="/app/auctions" className="no-underline text-inherit">
+          <div className={STAT_CLASS}>
+            <div className="stat-title">Leilões</div>
+            <div className="stat-desc">
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <div className="p-2 rounded-box border border-base-200 text-center">
+                  <div className="text-xs opacity-70">Criados</div>
+                  <div className="text-lg font-semibold">{kpis.auctionsCreated}</div>
+                </div>
+                <div className="p-2 rounded-box border border-base-200 text-center">
+                  <div className="text-xs opacity-70">Seguindo</div>
+                  <div className="text-lg font-semibold">{kpis.auctionsFollowed}</div>
+                </div>
+                <div className="p-2 rounded-box border border-base-200 text-center">
+                  <div className="text-xs opacity-70">Meus lances</div>
+                  <div className="text-lg font-semibold">{kpis.myBids}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Finance + donut */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300 lg:col-span-2">
+          <div className="card-body items-center text-center">
+            <h3 className="card-title justify-center font-semibold">Saldo para saque</h3>
+            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 items-center justify-items-center">
+              <div>
+                <div className="text-4xl font-bold"><Money value={kpis.withdrawable} /></div>
+                <button onClick={() => setHideMoney(v => !v)} className="btn btn-ghost btn-xs mt-2">
+                  {hideMoney ? "Mostrar" : "Ocultar"}
+                </button>
+              </div>
+              <div className="divider md:divider-horizontal my-0" />
+              <div>
+                <div className="opacity-70 text-sm">A liberar (vendas em andamento)</div>
+                <div className="text-2xl font-semibold"><Money value={kpis.pending} /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300">
+          <div className="card-body items-center text-center">
+            <h3 className="card-title justify-center font-semibold">Origem das visitas</h3>
+            <Donut values={donutSources} />
           </div>
         </div>
       </div>
-    </Link>
-  );
-}
 
-/** Página */
-export default function AccountOverviewPage() {
-  return (
-    <div className="space-y-8">
-      {/* TOPO: duas colunas com visual mais rico */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <NameCard />
-        <ReputationCard />
+      {/* Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300 xl:col-span-2">
+          <div className="card-body items-center text-center">
+            <h3 className="card-title justify-center font-semibold">Receita (12 períodos)</h3>
+            <Bars data={barsData} />
+          </div>
+        </div>
+
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300">
+          <div className="card-body items-center text-center">
+            <h3 className="card-title justify-center font-semibold">Downloads do app</h3>
+            <Line data={lineSales} />
+            <div className="text-sm opacity-70">variação mensal</div>
+          </div>
+        </div>
       </div>
 
-      <div className="divider">Gerenciamento</div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300">
+          <div className="card-body items-center text-center">
+            <h3 className="card-title justify-center font-semibold">Visitas únicas</h3>
+            <Line data={lineVisits} />
+          </div>
+        </div>
 
-      {/* LINKS: duas colunas, cards com faixas coloridas */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <LinkCard
-          href="/app/orders"
-          title="Compras"
-          desc="Acompanhe pedidos, pagamentos e entregas."
-          chips={["em andamento", "histórico"]}
-          color="from-primary/20 to-primary/5"
-          icon={<IconBag />}
-        />
-        <LinkCard
-          href="/app/sales"
-          title="Vendas"
-          desc="Gerencie anúncios, pagamentos e envio."
-          chips={["rascunhos", "publicados"]}
-          color="from-secondary/20 to-secondary/5"
-          icon={<IconStore />}
-        />
-        <LinkCard
-          href="/app/products"
-          title="Produtos cadastrados"
-          desc="Catálogo de itens que você adicionou."
-          chips={["base game", "expansões"]}
-          color="from-accent/20 to-accent/5"
-          icon={<IconGrid />}
-        />
-        <LinkCard
-          href="/app/auctions"
-          title="Leilões"
-          desc="Seus leilões, com lance e seguidos."
-          chips={["meus", "lance ativo", "seguindo"]}
-          color="from-warning/20 to-warning/5"
-          icon={<IconHammer />}
-        />
-        <LinkCard
-          href="/app/profile"
-          title="Dados de cadastro"
-          desc="Seu nome, e-mail, telefone e documento."
-          color="from-info/20 to-info/5"
-          icon={<IconUser />}
-        />
-        <LinkCard
-          href="/app/address"
-          title="Endereço"
-          desc="Onde você recebe e de onde envia."
-          color="from-success/20 to-success/5"
-          icon={<IconMap />}
-        />
-        <LinkCard
-          href="/app/bank"
-          title="Contas bancárias"
-          desc="Onde você recebe pagamentos."
-          color="from-neutral/20 to-neutral/5"
-          icon={<IconBank />}
-        />
-        <LinkCard
-          href="/app/settings"
-          title="Preferências & Notificações"
-          desc="Alertas, privacidade e integrações."
-          color="from-error/20 to-error/5"
-          icon={<IconGear />}
-        />
+        <div className="card bg-base-100 rounded-2xl shadow-sm border border-base-300">
+          <div className="card-body items-center text-center">
+            <h3 className="card-title justify-center font-semibold">Atalhos</h3>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <Link href="/app/sell/new" className="btn btn-primary btn-sm">+ Novo anúncio</Link>
+              <Link href="/app/auctions/new" className="btn btn-secondary btn-sm">Criar leilão</Link>
+              <Link href="/app/bank" className="btn btn-outline btn-sm">Conta para receber</Link>
+              <Link href="/app/questions" className="btn btn-ghost btn-sm">Responder perguntas</Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
