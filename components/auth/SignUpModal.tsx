@@ -5,9 +5,15 @@ export type SignUpModalRef = { open: () => void; close: () => void };
 
 const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [terms, setTerms] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [apiErrors, setApiErrors] = useState<string[]>([]);
+  const [apiMsg, setApiMsg] = useState<string | null>(null);
+  const [verifyUrl, setVerifyUrl] = useState<string | null>(null);
 
   const passwordsMatch = password.length > 0 && password === confirm;
 
@@ -16,13 +22,67 @@ const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
     close: () => dialogRef.current?.close(),
   }));
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    // TODO: troque por sua chamada de API /api/auth/signup
-    console.log("signup payload →", Object.fromEntries(form.entries()));
-    dialogRef.current?.close();
+async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+
+  // ✅ capture o form ANTES de qualquer await
+  const formEl = e.currentTarget as HTMLFormElement;
+
+  setApiErrors([]);
+  setApiMsg(null);
+  setVerifyUrl(null);
+
+  if (!passwordsMatch) {
+    setApiErrors(["As senhas não coincidem."]);
+    return;
   }
+  if (!terms) {
+    setApiErrors(["É necessário aceitar os Termos de Uso e a Política de Privacidade."]);
+    return;
+  }
+
+  const form = new FormData(formEl);
+  const payload = {
+    username: String(form.get("username") || "").trim(),
+    email: String(form.get("email") || "").trim(),
+    password: String(form.get("password") || ""),
+  };
+
+  setLoading(true);
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({} as any));
+
+    if (!res.ok) {
+      const msgs = Array.isArray((data as any)?.errors)
+        ? (data as any).errors.map((x: any) => x.msg || `${x.path}: inválido`)
+        : [(data as any)?.message || (data as any)?.detail || "Falha no cadastro"];
+      setApiErrors(msgs);
+      return;
+    }
+
+    setApiMsg(data.message || "Cadastro criado. Verifique seu e-mail.");
+    if (data.verifyUrl) setVerifyUrl(data.verifyUrl);
+
+    // ✅ agora pode resetar com segurança
+    formEl.reset();
+    setPassword("");
+    setConfirm("");
+    setTerms(false);
+
+    // se quiser fechar o modal, faça DEPOIS do reset:
+    // dialogRef.current?.close();
+  } catch (err: any) {
+    setApiErrors([err?.message || "Erro inesperado"]);
+  } finally {
+    setLoading(false);
+  }
+}
+
 
   return (
     <dialog ref={dialogRef} className="modal">
@@ -47,12 +107,7 @@ const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
 
         {/* Social */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <button
-            type="button"
-            className="btn btn-outline w-full"
-            onClick={() => console.log("Google OAuth")}
-            aria-label="Continuar com Google"
-          >
+          <button type="button" className="btn btn-outline w-full" onClick={() => console.log("Google OAuth")} aria-label="Continuar com Google">
             <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
               <path
                 fill="currentColor"
@@ -61,12 +116,7 @@ const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
             </svg>
             Google
           </button>
-          <button
-            type="button"
-            className="btn btn-outline w-full"
-            onClick={() => console.log("Facebook OAuth")}
-            aria-label="Continuar com Facebook"
-          >
+          <button type="button" className="btn btn-outline w-full" onClick={() => console.log("Facebook OAuth")} aria-label="Continuar com Facebook">
             <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
               <path fill="currentColor" d="M13 22v-9h3l.5-3H13V8.5c0-.9.3-1.5 1.8-1.5H17V4.1C16.6 4 15.5 4 14.3 4 11.8 4 10 5.5 10 8.2V10H7v3h3v9h3Z" />
             </svg>
@@ -76,7 +126,7 @@ const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
 
         <div className="divider my-3">ou</div>
 
-        {/* Form vertical (sem form aninhado) */}
+        {/* Form (sem form aninhado) */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username */}
           <div className="form-control">
@@ -118,15 +168,13 @@ const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
                 name="password"
                 type="password"
                 required
-                minLength={6}
+                minLength={8} // <- backend exige 8+
                 autoComplete="new-password"
                 className="input input-bordered w-full"
                 onChange={(e) => setPassword(e.target.value)}
               />
               <label className="label pt-1">
-                <span className="label-text-alt text-base-content/60">
-                  Mínimo de 6 caracteres
-                </span>
+                <span className="label-text-alt text-base-content/60">Mínimo de 8 caracteres</span>
               </label>
             </div>
 
@@ -138,7 +186,7 @@ const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
                 name="password_confirm"
                 type="password"
                 required
-                minLength={6}
+                minLength={8}
                 autoComplete="new-password"
                 className={`input input-bordered w-full ${confirm && !passwordsMatch ? "input-error" : ""}`}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -182,27 +230,47 @@ const SignUpModal = forwardRef<SignUpModalRef>((_, ref) => {
             </label>
           </div>
 
+          {/* Feedback da API */}
+          {(apiErrors.length > 0 || apiMsg) && (
+            <div className="mt-2 space-y-2">
+              {apiErrors.length > 0 && (
+                <div className="alert alert-error">
+                  <ul className="list-disc ml-5">
+                    {apiErrors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {apiMsg && (
+                <div className="alert">
+                  <span>{apiMsg}</span>
+                </div>
+              )}
+              {verifyUrl && (
+                <div className="text-sm opacity-70">
+                  Link de verificação (DEV):{" "}
+                  <a className="link" href={verifyUrl}>
+                    {verifyUrl}
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="mt-1 flex flex-col sm:flex-row gap-2">
-            <button
-              type="submit"
-              className="btn btn-primary flex-1"
-              disabled={!passwordsMatch || !terms}
-            >
-              Criar conta
+            <button type="submit" className="btn btn-primary flex-1" disabled={!passwordsMatch || !terms || loading}>
+              {loading ? "Enviando..." : "Criar conta"}
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost w-full sm:w-auto"
-              onClick={() => dialogRef.current?.close()}
-            >
+            <button type="button" className="btn btn-ghost w-full sm:w-auto" onClick={() => dialogRef.current?.close()}>
               Cancelar
             </button>
           </div>
         </form>
       </div>
 
-      {/* Backdrop (ok usar form method="dialog" aqui, pois não está aninhado) */}
+      {/* Backdrop */}
       <form method="dialog" className="modal-backdrop">
         <button aria-label="Fechar" />
       </form>

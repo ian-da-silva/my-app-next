@@ -1,10 +1,13 @@
-// ---------------------------------
-// components/landing/site-nav.tsx
-// ---------------------------------
 "use client";
 import Link from "next/link";
+import { useRef } from "react";
+import SignUpModal, { SignUpModalRef } from "@/components/auth/SignUpModal";
+import LoginModal, { LoginModalRef } from "@/components/auth/LoginModal";
 
 export function SiteNav() {
+  const signUpRef = useRef<SignUpModalRef>(null);
+  const loginRef = useRef<LoginModalRef>(null);
+
   return (
     <header className="sticky top-0 z-40 backdrop-blur bg-base-100/80 border-b border-base-200">
       <div className="navbar container mx-auto px-4">
@@ -19,6 +22,7 @@ export function SiteNav() {
             <span className="text-xl font-bold tracking-tight">MercadoBG</span>
           </Link>
         </div>
+
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal px-1">
             <li><Link href="#categorias">Categorias</Link></li>
@@ -27,11 +31,20 @@ export function SiteNav() {
             <li><Link href="#depoimentos">Depoimentos</Link></li>
           </ul>
         </div>
+
         <div className="navbar-end gap-2">
-          <Link href="/login" className="btn btn-ghost">Entrar</Link>
-          <Link href="/signup" className="btn btn-primary">Criar conta</Link>
+          {/* Entrar -> abre LoginModal */}
+          <button className="btn btn-ghost" onClick={() => loginRef.current?.open()}>
+            Entrar
+          </button>
+
+          {/* Criar conta -> abre SignUpModal */}
+          <button className="btn btn-primary" onClick={() => signUpRef.current?.open()}>
+            Criar conta
+          </button>
         </div>
       </div>
+
       <input id="menu-drawer" type="checkbox" className="drawer-toggle hidden" />
       <div className="drawer-side lg:hidden">
         <label htmlFor="menu-drawer" className="drawer-overlay" />
@@ -40,10 +53,40 @@ export function SiteNav() {
           <li><Link href="#destaques">Destaques</Link></li>
           <li><Link href="#como-funciona">Como funciona</Link></li>
           <li><Link href="#depoimentos">Depoimentos</Link></li>
-          <li className="mt-2"><Link href="/login">Entrar</Link></li>
-          <li><Link href="/signup">Criar conta</Link></li>
+
+          {/* Mobile: Entrar */}
+          <li className="mt-2">
+            <button
+              className="btn btn-ghost w-full"
+              onClick={() => {
+                const drawer = document.getElementById("menu-drawer") as HTMLInputElement | null;
+                if (drawer) drawer.checked = false;
+                loginRef.current?.open();
+              }}
+            >
+              Entrar
+            </button>
+          </li>
+
+          {/* Mobile: Criar conta */}
+          <li>
+            <button
+              className="btn btn-primary w-full"
+              onClick={() => {
+                const drawer = document.getElementById("menu-drawer") as HTMLInputElement | null;
+                if (drawer) drawer.checked = false;
+                signUpRef.current?.open();
+              }}
+            >
+              Criar conta
+            </button>
+          </li>
         </ul>
       </div>
+
+      {/* Modais montados junto do nav */}
+      <LoginModal ref={loginRef} />
+      <SignUpModal ref={signUpRef} />
     </header>
   );
 }

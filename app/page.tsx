@@ -14,7 +14,7 @@ import { sampleGameThumbs, featuredListings } from "@/lib/mock";
 
 export default function LandingPage() {
   return (
-    <main data-theme="emerald" className="min-h-screen bg-base-100 text-base-content">
+    <main data-theme="light" className="min-h-screen bg-base-100 text-base-content">
       <SiteNav />
       <Hero thumbs={sampleGameThumbs} />
       <KeyStats stats={[
